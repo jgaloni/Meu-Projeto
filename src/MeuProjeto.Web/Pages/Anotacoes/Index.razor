@@ -1,0 +1,309 @@
+@page "/anotacoes"
+@using MeuProjeto.Aplicacao.Anotacoes
+@using MeuProjeto.Aplicacao.Categorias
+@using MeuProjeto.Web.Pages.Categorias
+@using MeuProjeto.Web.Servicos.Anotacoes
+@using MeuProjeto.Web.Servicos.Categorias
+@inject IAnotacaoApiCliente AnotacaoApiCliente
+@inject ICategoriaApiCliente CategoriaApiCliente
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="bi bi-journal-text"></i> Anotações</h1>
+
+    <div class="d-flex gap-2">
+        @if (!_mostrarGerenciadorCategorias)
+        {
+            <button class="btn btn-outline-secondary" @onclick="() => _mostrarGerenciadorCategorias = true">
+                <i class="bi bi-tags"></i> Gerenciar categorias
+            </button>
+        }
+
+        @if (!_mostrarFormulario)
+        {
+            <button class="btn btn-primary" @onclick="AbrirFormularioNovo">
+                <i class="bi bi-plus-lg"></i> Nova anotação
+            </button>
+        }
+    </div>
+</div>
+
+@if (_mostrarGerenciadorCategorias)
+{
+    <GerenciadorCategorias OnAlterado="CarregarCategoriasAsync" />
+
+    <button type="button" class="btn btn-sm btn-outline-secondary mb-4" @onclick="() => _mostrarGerenciadorCategorias = false">
+        Fechar gerenciador de categorias
+    </button>
+}
+
+@if (_mostrarFormulario)
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            @if (_anotacaoEmEdicaoId is null)
+            {
+                <h5 class="card-title mb-3">Nova anotação</h5>
+            }
+            else
+            {
+                <h5 class="card-title mb-3">Editar anotação</h5>
+            }
+
+            <EditForm Model="_modeloFormulario" OnValidSubmit="SalvarAsync">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">Título</label>
+                    <InputText class="form-control" @bind-Value="_modeloFormulario.Titulo" />
+                    <ValidationMessage For="() => _modeloFormulario.Titulo" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Conteúdo</label>
+                    <InputTextArea class="form-control" rows="6" @bind-Value="_modeloFormulario.Conteudo" />
+                    <ValidationMessage For="() => _modeloFormulario.Conteudo" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Categoria</label>
+                    <InputSelect class="form-select" @bind-Value="_modeloFormulario.CategoriaId">
+                        <option value="">Sem categoria</option>
+                        @foreach (var categoria in _categorias)
+                        {
+                            <option value="@categoria.Id">@categoria.Nome</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_mensagemErro))
+                {
+                    <div class="alert alert-danger py-2">@_mensagemErro</div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_salvando">
+                        @if (_anotacaoEmEdicaoId is null)
+                        {
+                            <text>Adicionar</text>
+                        }
+                        else
+                        {
+                            <text>Salvar alterações</text>
+                        }
+                    </button>
+
+                    <button type="button" class="btn btn-outline-secondary" @onclick="FecharFormulario">
+                        Cancelar
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (_carregando)
+{
+    <p class="text-muted">Carregando anotações...</p>
+}
+else if (_anotacoes.Count == 0)
+{
+    <p class="text-muted">Nenhuma anotação cadastrada ainda.</p>
+}
+else
+{
+    @foreach (var anotacao in _anotacoes)
+    {
+        var expandida = _anotacoesExpandidas.Contains(anotacao.Id);
+
+        <div class="card shadow-sm mb-2">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="cursor: pointer" @onclick="() => AlternarExpansao(anotacao.Id)">
+                        @if (expandida)
+                        {
+                            <i class="bi bi-chevron-down"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-chevron-right"></i>
+                        }
+                        <h5 class="card-title mb-0">@anotacao.Titulo</h5>
+                        @if (anotacao.CategoriaNome is not null)
+                        {
+                            <span class="badge text-bg-secondary">@anotacao.CategoriaNome</span>
+                        }
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditarAsync(anotacao)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoverAsync(anotacao.Id)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @if (expandida)
+                {
+                    <p class="card-text mt-3" style="white-space: pre-wrap">@anotacao.Conteudo</p>
+                    <p class="card-text mb-0">
+                        <small class="text-muted">
+                            Criada em @anotacao.DataCriacao.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            @if (anotacao.DataAtualizacao is not null)
+                            {
+                                <text> · Atualizada em @anotacao.DataAtualizacao.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</text>
+                            }
+                        </small>
+                    </p>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<AnotacaoDto> _anotacoes = new List<AnotacaoDto>();
+    private List<CategoriaDto> _categorias = new List<CategoriaDto>();
+    private readonly HashSet<int> _anotacoesExpandidas = new HashSet<int>();
+    private ModeloFormularioAnotacao _modeloFormulario = new ModeloFormularioAnotacao();
+    private int? _anotacaoEmEdicaoId;
+    private bool _mostrarFormulario;
+    private bool _mostrarGerenciadorCategorias;
+    private bool _carregando = true;
+    private bool _salvando;
+    private string? _mensagemErro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarAnotacoesAsync();
+        await CarregarCategoriasAsync();
+    }
+
+    private async Task CarregarCategoriasAsync()
+    {
+        try
+        {
+            _categorias = (await CategoriaApiCliente.ObterTodasAsync()).ToList();
+        }
+        catch (HttpRequestException)
+        {
+            _categorias = new List<CategoriaDto>();
+        }
+    }
+
+    private async Task CarregarAnotacoesAsync()
+    {
+        _carregando = true;
+        _mensagemErro = null;
+
+        try
+        {
+            _anotacoes = (await AnotacaoApiCliente.ObterTodasAsync()).ToList();
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API. Verifique se ela está em execução e se o banco de dados está acessível.";
+        }
+
+        _carregando = false;
+    }
+
+    private void AlternarExpansao(int id)
+    {
+        if (!_anotacoesExpandidas.Add(id))
+        {
+            _anotacoesExpandidas.Remove(id);
+        }
+    }
+
+    private void AbrirFormularioNovo()
+    {
+        _anotacaoEmEdicaoId = null;
+        _modeloFormulario = new ModeloFormularioAnotacao();
+        _mensagemErro = null;
+        _mostrarFormulario = true;
+    }
+
+    private async Task SalvarAsync()
+    {
+        _salvando = true;
+        _mensagemErro = null;
+
+        try
+        {
+            bool sucesso;
+
+            if (_anotacaoEmEdicaoId is null)
+            {
+                var criada = await AnotacaoApiCliente.CriarAsync(new CriarAnotacaoDto(_modeloFormulario.Titulo, _modeloFormulario.Conteudo, _modeloFormulario.CategoriaId));
+                sucesso = criada is not null;
+            }
+            else
+            {
+                var atualizada = await AnotacaoApiCliente.AtualizarAsync(_anotacaoEmEdicaoId.Value, new AtualizarAnotacaoDto(_modeloFormulario.Titulo, _modeloFormulario.Conteudo, _modeloFormulario.CategoriaId));
+                sucesso = atualizada is not null;
+            }
+
+            if (sucesso)
+            {
+                FecharFormulario();
+                await CarregarAnotacoesAsync();
+            }
+            else
+            {
+                _mensagemErro = "Não foi possível salvar a anotação. Tente novamente.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API. Verifique se ela está em execução e se o banco de dados está acessível.";
+        }
+
+        _salvando = false;
+    }
+
+    private void EditarAsync(AnotacaoDto anotacao)
+    {
+        _anotacaoEmEdicaoId = anotacao.Id;
+        _modeloFormulario = new ModeloFormularioAnotacao
+        {
+            Titulo = anotacao.Titulo,
+            Conteudo = anotacao.Conteudo,
+            CategoriaId = anotacao.CategoriaId
+        };
+        _mensagemErro = null;
+        _mostrarFormulario = true;
+    }
+
+    private async Task RemoverAsync(int id)
+    {
+        try
+        {
+            await AnotacaoApiCliente.RemoverAsync(id);
+            _anotacoesExpandidas.Remove(id);
+            await CarregarAnotacoesAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API. Verifique se ela está em execução e se o banco de dados está acessível.";
+        }
+    }
+
+    private void FecharFormulario()
+    {
+        _mostrarFormulario = false;
+        _anotacaoEmEdicaoId = null;
+        _modeloFormulario = new ModeloFormularioAnotacao();
+    }
+
+    private class ModeloFormularioAnotacao
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Informe o título.")]
+        public string Titulo { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Informe o conteúdo.")]
+        public string Conteudo { get; set; } = string.Empty;
+
+        public int? CategoriaId { get; set; }
+    }
+}

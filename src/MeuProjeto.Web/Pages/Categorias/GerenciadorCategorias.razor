@@ -1,0 +1,132 @@
+@using MeuProjeto.Aplicacao.Categorias
+@using MeuProjeto.Web.Servicos.Categorias
+@inject ICategoriaApiCliente CategoriaApiCliente
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-tags"></i> Categorias</h5>
+
+        <EditForm Model="_modeloFormulario" OnValidSubmit="CriarAsync">
+            <DataAnnotationsValidator />
+
+            <div class="d-flex gap-2 align-items-start">
+                <div class="flex-grow-1">
+                    <InputText class="form-control" placeholder="Nome da categoria" @bind-Value="_modeloFormulario.Nome" />
+                    <ValidationMessage For="() => _modeloFormulario.Nome" />
+                </div>
+                <button type="submit" class="btn btn-primary" disabled="@_salvando">
+                    <i class="bi bi-plus-lg"></i> Adicionar
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_mensagemErro))
+            {
+                <div class="alert alert-danger py-2 mt-3">@_mensagemErro</div>
+            }
+        </EditForm>
+
+        @if (_carregando)
+        {
+            <p class="text-muted mt-3 mb-0">Carregando categorias...</p>
+        }
+        else if (_categorias.Count == 0)
+        {
+            <p class="text-muted mt-3 mb-0">Nenhuma categoria cadastrada ainda.</p>
+        }
+        else
+        {
+            <ul class="list-group mt-3">
+                @foreach (var categoria in _categorias)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        @categoria.Nome
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoverAsync(categoria.Id)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnAlterado { get; set; }
+
+    private List<CategoriaDto> _categorias = new List<CategoriaDto>();
+    private ModeloFormularioCategoria _modeloFormulario = new ModeloFormularioCategoria();
+    private bool _carregando = true;
+    private bool _salvando;
+    private string? _mensagemErro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarCategoriasAsync();
+    }
+
+    private async Task CarregarCategoriasAsync()
+    {
+        _carregando = true;
+        _mensagemErro = null;
+
+        try
+        {
+            _categorias = (await CategoriaApiCliente.ObterTodasAsync()).ToList();
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API.";
+        }
+
+        _carregando = false;
+    }
+
+    private async Task CriarAsync()
+    {
+        _salvando = true;
+        _mensagemErro = null;
+
+        try
+        {
+            var categoria = await CategoriaApiCliente.CriarAsync(new CriarCategoriaDto(_modeloFormulario.Nome));
+
+            if (categoria is null)
+            {
+                _mensagemErro = "Não foi possível criar a categoria.";
+            }
+            else
+            {
+                _modeloFormulario = new ModeloFormularioCategoria();
+                await CarregarCategoriasAsync();
+                await OnAlterado.InvokeAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API.";
+        }
+
+        _salvando = false;
+    }
+
+    private async Task RemoverAsync(int id)
+    {
+        try
+        {
+            await CategoriaApiCliente.RemoverAsync(id);
+            await CarregarCategoriasAsync();
+            await OnAlterado.InvokeAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _mensagemErro = "Não foi possível conectar à API.";
+        }
+    }
+
+    private class ModeloFormularioCategoria
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Informe o nome.")]
+        public string Nome { get; set; } = string.Empty;
+    }
+}
