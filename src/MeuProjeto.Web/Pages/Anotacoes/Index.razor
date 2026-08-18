@@ -210,9 +210,13 @@ else
 
     private void AlternarExpansao(int id)
     {
-        if (!_anotacoesExpandidas.Add(id))
+        if (_anotacoesExpandidas.Contains(id))
         {
             _anotacoesExpandidas.Remove(id);
+        }
+        else
+        {
+            _anotacoesExpandidas.Add(id);
         }
     }
 

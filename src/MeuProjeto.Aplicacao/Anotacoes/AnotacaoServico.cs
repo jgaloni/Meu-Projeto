@@ -38,13 +38,7 @@ public class AnotacaoServico : IAnotacaoServico
         await _anotacaoRepositorio.SalvarAlteracoesAsync();
 
         var anotacaoSalva = await _anotacaoRepositorio.ObterPorIdAsync(anotacao.Id);
-
-        if (anotacaoSalva is null)
-        {
-            return ParaDto(anotacao);
-        }
-
-        return ParaDto(anotacaoSalva);
+        return ParaDto(anotacaoSalva ?? anotacao);
     }
 
     public async Task<AnotacaoDto?> AtualizarAsync(int id, AtualizarAnotacaoDto dto)
@@ -61,13 +55,7 @@ public class AnotacaoServico : IAnotacaoServico
         await _anotacaoRepositorio.SalvarAlteracoesAsync();
 
         var anotacaoAtualizada = await _anotacaoRepositorio.ObterPorIdAsync(id);
-
-        if (anotacaoAtualizada is null)
-        {
-            return ParaDto(anotacao);
-        }
-
-        return ParaDto(anotacaoAtualizada);
+        return ParaDto(anotacaoAtualizada ?? anotacao);
     }
 
     public async Task<bool> RemoverAsync(int id)
