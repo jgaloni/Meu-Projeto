@@ -1,8 +1,10 @@
+using MeuProjeto.Aplicacao.Paineis;
 using MeuProjeto.Dominio.Anotacoes;
 using MeuProjeto.Dominio.Categorias;
 using MeuProjeto.Infraestrutura.Persistencia;
 using MeuProjeto.Infraestrutura.Anotacoes;
 using MeuProjeto.Infraestrutura.Categorias;
+using MeuProjeto.Infraestrutura.Paineis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,7 @@ public static class InjecaoDependenciaInfraestrutura
 
         servicos.AddScoped<IAnotacaoRepositorio, AnotacaoRepositorio>();
         servicos.AddScoped<ICategoriaRepositorio, CategoriaRepositorio>();
+        servicos.AddScoped<IPainelServico, PainelServico>();
 
         return servicos;
     }

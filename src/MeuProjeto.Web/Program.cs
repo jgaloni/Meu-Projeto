@@ -1,5 +1,6 @@
 using MeuProjeto.Web.Servicos.Anotacoes;
 using MeuProjeto.Web.Servicos.Categorias;
+using MeuProjeto.Web.Servicos.Paineis;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
@@ -18,6 +19,11 @@ builder.Services.AddHttpClient<IAnotacaoApiCliente, AnotacaoApiCliente>(cliente 
 });
 
 builder.Services.AddHttpClient<ICategoriaApiCliente, CategoriaApiCliente>(cliente =>
+{
+    cliente.BaseAddress = new Uri(apiBaseUrl);
+});
+
+builder.Services.AddHttpClient<IPainelApiCliente, PainelApiCliente>(cliente =>
 {
     cliente.BaseAddress = new Uri(apiBaseUrl);
 });
