@@ -1,6 +1,4 @@
-using MeuProjeto.Web.Servicos.Anotacoes;
-using MeuProjeto.Web.Servicos.Categorias;
-using MeuProjeto.Web.Servicos.Paineis;
+using MeuProjeto.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
@@ -13,20 +11,7 @@ if (string.IsNullOrWhiteSpace(apiBaseUrl))
     throw new InvalidOperationException("A configuração ApiBaseUrl não foi definida.");
 }
 
-builder.Services.AddHttpClient<IAnotacaoApiCliente, AnotacaoApiCliente>(cliente =>
-{
-    cliente.BaseAddress = new Uri(apiBaseUrl);
-});
-
-builder.Services.AddHttpClient<ICategoriaApiCliente, CategoriaApiCliente>(cliente =>
-{
-    cliente.BaseAddress = new Uri(apiBaseUrl);
-});
-
-builder.Services.AddHttpClient<IPainelApiCliente, PainelApiCliente>(cliente =>
-{
-    cliente.BaseAddress = new Uri(apiBaseUrl);
-});
+builder.Services.AdicionarClientesApi(apiBaseUrl);
 
 var app = builder.Build();
 
